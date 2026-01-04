@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Activity Recognition Dashboard</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root {
+    --primary: #6c63ff;
+    --secondary: #22c55e;
+    --warning: #f59e0b;
+    --neutral: #9ca3af;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: #f4f6fb; /* ✅ white/soft background */
+    min-height: 100vh;
+    color: #111827;
+}
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+    padding: 24px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+header h1 {
+    font-size: 2.4rem;
+    font-weight: 700;
+}
+
+header p {
+    color: #6b7280;
+    margin-top: 6px;
+}
+
+/* ================= DASHBOARD GRID ================= */
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+}
+
+/* ================= CARD ================= */
+.card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+}
+
+.card h2 {
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ================= REALTIME ================= */
+.realtime {
+    grid-column: 1 / -1;
+    text-align: center;
+}
+
+.activity-display {
+    font-size: 3.2rem;
+    font-weight: 700;
+    margin: 18px 0;
+    color: var(--primary);
+}
+
+.confidence {
+    font-size: 1.1rem;
+    color: #4b5563;
+}
+
+.timestamp {
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+/* ================= STATUS DOT ================= */
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--secondary);
+}
+
+/* ================= STATS ================= */
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.stat-item {
+    background: #f9fafb;
+    border-radius: 14px;
+    padding: 16px;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.stat-label {
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+/* ================= HISTORY ================= */
+.history-list {
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 0.95rem;
+}
+
+.activity-badge {
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-weight: 600;
+    color: white;
+}
+
+.activity-walking { background: var(--secondary); }
+.activity-running { background: var(--warning); }
+.activity-idle { background: var(--neutral); }
+
+/* ================= BUTTON ================= */
+.controls {
+    margin-top: 16px;
+    text-align: center;
+}
+
+button {
+    background: var(--primary);
+    border: none;
+    color: white;
+    padding: 10px 26px;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+/* ================= ERROR ================= */
+.error {
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 14px;
+    border-radius: 12px;
+    margin-top: 16px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+    <header>
+        <h1>🏃 Activity Recognition</h1>
+        <p>Real-time Human Activity Monitoring</p>
+    </header>
+
+    <div class="dashboard">
+
+        <!-- REALTIME -->
+        <div class="card realtime">
+            <h2><span class="status-dot"></span> Current Activity</h2>
+            <div class="activity-display" id="currentActivity">Loading…</div>
+            <div class="confidence" id="confidence">Confidence: --</div>
+            <div class="timestamp" id="lastUpdate">Last update: --</div>
+        </div>
+
+        <!-- STATS -->
+        <div class="card">
+            <h2>📊 Statistics</h2>
+            <div class="stat-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="walkingCount">0</div>
+                    <div class="stat-label">Walking</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="runningCount">0</div>
+                    <div class="stat-label">Running</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="idleCount">0</div>
+                    <div class="stat-label">Idle</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="totalCount">0</div>
+                    <div class="stat-label">Total</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DISTRIBUTION CHART -->
+        <div class="card">
+            <h2>📈 Activity Distribution</h2>
+            <canvas id="activityChart"></canvas>
+        </div>
+
+        <!-- HISTORY -->
+        <div class="card">
+            <h2>📜 Activity History</h2>
+            <div class="history-list" id="historyList">
+                <div class="loading">Loading history…</div>
+            </div>
+            <div class="controls">
+                <button onclick="loadHistory()">Refresh</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="errorContainer"></div>
+</div>
+
+<script>
+let isUpdating = false;
+let chart;
+
+async function updateRealtime() {
+    if (isUpdating) return;
+    isUpdating = true;
+
+    try {
+        const res = await fetch('/api/realtime');
+        const data = await res.json();
+
+        currentActivity.textContent = data.activity;
+        confidence.textContent = `Confidence: ${(data.confidence * 100).toFixed(1)}%`;
+        lastUpdate.textContent = `Last update: ${new Date(data.timestamp).toLocaleTimeString()}`;
+    } catch {
+        showError('Realtime fetch failed');
+    } finally {
+        isUpdating = false;
+    }
+}
+
+async function updateStats() {
+    const res = await fetch('/api/stats');
+    const d = await res.json();
+
+    walkingCount.textContent = d.walking_count;
+    runningCount.textContent = d.running_count;
+    idleCount.textContent = d.idle_count;
+    totalCount.textContent = d.total_records;
+
+    if (!chart) {
+        chart = new Chart(activityChart, {
+            type: 'doughnut',
+            data: {
+                labels: ['Walking', 'Running', 'Idle'],
+                datasets: [{
+                    data: [d.walking_count, d.running_count, d.idle_count],
+                    backgroundColor: ['#22c55e', '#f59e0b', '#9ca3af']
+                }]
+            }
+        });
+    } else {
+        chart.data.datasets[0].data =
+            [d.walking_count, d.running_count, d.idle_count];
+        chart.update();
+    }
+}
+
+async function loadHistory() {
+    const res = await fetch('/api/history?limit=20');
+    const d = await res.json();
+
+    historyList.innerHTML = d.records.map(r => `
+        <div class="history-item">
+            <span class="activity-badge activity-${r.activity.toLowerCase()}">${r.activity}</span>
+            <span>${(r.confidence * 100).toFixed(0)}%</span>
+            <span>${new Date(r.timestamp).toLocaleTimeString()}</span>
+        </div>
+    `).join('');
+}
+
+function showError(msg) {
+    errorContainer.innerHTML = `<div class="error">${msg}</div>`;
+    setTimeout(() => errorContainer.innerHTML = '', 4000);
+}
+
+async function init() {
+    await updateRealtime();
+    await updateStats();
+    await loadHistory();
+
+    setInterval(updateRealtime, 3000);
+    setInterval(updateStats, 3000);
+    setInterval(loadHistory, 30000);
+}
+
+window.onload = init;
+</script>
+</body>
+</html>
