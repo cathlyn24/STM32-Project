@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Activity Recognition</string>
+    <string name="confidence_percentage">%1$s%%</string>
+</resources>
